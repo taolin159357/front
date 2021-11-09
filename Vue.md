@@ -175,6 +175,41 @@
 
 * vue组件之间的传值
 
+  * props/$emit
+
+    ⽗组件给⼦组件添加属性 :fatherName="name" 传值，⼦组件通过 props:['fatherName'] 接收； ⼦组件可以通过 this.$emit('changeFatherName','吴彦祖') 向⽗组件发送事件和数据， ⽗组件通过 @changeFatherName="changeFatherName" 监听事件和传递过来的数据。
+
+  * provide/inject
+
+    ⽗组件通过 provide:{fatherAge:30} 传值，⼦组件通过 inject:["fatherAge"] 接收, provide 传递的数据， 不仅所有⼦组件都可以接收，所有后代组件均可以通过 inject 接收到。
+
+  * $children/$parent
+
+    ⽗组件通过 $children 访问⼦组件属性和⽅法，⼦组件通过 $parent 访问⽗组件属性和⽅法，this.$children[0].age=2 修改⼦组件数据，同理 this.$parent.age=30 修改⽗组件数据。
+
+  * ref/refs
+
+    ⼦组件绑定ref属性，⽗组件通过 this.$refs['xxx'] 访问⼦组件，⽤法和 $children 相同； 本例中 this.$refs['son']===this.$children[0] //true
+
+  * EventBus
+
+    eventBus ⼜称为事件总线，在vue中可以使⽤它来作为沟通桥梁的概念, 就像是所有组件共⽤相同的事件中⼼， 可以向该中⼼注册发送事件或接收事件， 所有组件都可以通知其他组件。 （维护困难，eventName起名字困难，不易维护，不及时注销事件会产⽣各种问题，复杂项⽬中还是使⽤Vuex）
+
+    ```js
+    //新建⼀个Vue实例作为中央事件总线
+    let EventBus = new Vue();
+    //监听事件
+    EventBus.$on('eventName', (val) => {
+    //......do something
+    });
+    //触发事件
+    EventBus.$emit('eventName', 'this is a message.');
+    //移除事件
+    EventBus.$off('eventName', {})
+    ```
+
+  * Vuex
+
 * Vue-router路由
 
   后端路由，就是把所有url地址都对应到服务器的资源，这个对应关系就是路由。
@@ -184,3 +219,77 @@
   对于单页面应用程序来说，主要通过URL中的hash（url地址中的#号）来实现不同页面之间的切换。同时，hash有一个特点：HTTP请求中不会包含hash相关的内容。所以，单页面程序中的页面跳转主要用hash实现。
 
   总结：在单页应用程序中，这种通过hash改变来切换页面的方式，称作前端路由（区别于后端路由）。
+
+* vue2和vue3的区别
+
+  * 项⽬⽬录结构
+
+    vue-cli2.0与3.0在⽬录结构⽅⾯，有明显的不同，vue-cli3.0移除了配置⽂件⽬录config 和 build ⽂件夹，同时移除了 static 静态⽂件夹，新增了 public ⽂件夹，打开层级⽬录还会发现，index.html 移动到 public 中
+
+  * 配置项
+
+    3.0 config⽂件已经被移除，但是多了.env.production和env.development⽂件，除了⽂件位置，实际配置起来和2.0没什么不同，没了config⽂件，跨域需要配置域名时，从config/index.js 挪到了vue.config.js中，配置⽅法不变
+
+  * 渲染
+
+    Vue2.x使⽤的Virtual Dom实现的渲染，Vue3.0不论是原⽣的html标签还是vue组件，他们都会通过h函数来判断，如果是原⽣html标签，在运⾏时直接通过Virtual Dom来直接渲染，同样如果是组件会直接⽣成组件代码
+
+  * 数据监听
+
+    Vue2.x⼤家都知道使⽤的是es5的object.defineproperties中getter和setter实现的，⽽vue3.0的版本，是基于Proxy进⾏监听的，其实基于proxy监听就是所谓的lazy by default，什么意思呢，就是只要你⽤到了才会监听，可以理解为‘按需监听’，官⽅给出的诠释是：速度加倍，同时内存占⽤还减半。
+
+  * 按需引⼊
+
+    Vue2.x中new出的实例对象，所有的东⻄都在这个vue对象上，这样其实⽆论你⽤到还是没⽤到，都会跑⼀遍。⽽vue3.0中可以⽤ES module imports按需引⼊，如：keep-alive内置组件、v-model指令，等等。
+
+* vue 中 mixin 和 mixins 区别？
+
+  mixin ⽤于全局混⼊，会影响到每个组件实例。
+
+  mixins 应该是我们最常使⽤的扩展组件的⽅式了。如果多个组件中有相同的业务逻辑，就可以将这些逻辑剥离出来，通过 mixins 混⼊代码，⽐如上拉下拉加载数据这种逻辑等等。另外需要注意的是 mixins混⼊的钩⼦函数会先于组件内的钩⼦函数执⾏，并且在遇到同名选项的时候也会有选择性的进⾏合并
+
+* computed和watch的区别？
+
+  computed是计算属性，watch是监听。
+
+  computed在调⽤值的时候不需要加括号，可以当属性⽤；⽽且它根据依赖会⾃动缓存，即如果依赖不变，computed的值就不会被重新计算
+
+  watch有两个选项，immediate表示是否在第⼀次渲染的时候要执⾏这个函数，deep表示如果我们监听⼀个对象我们是否要看更深层次的变化；当⼀个属性发⽣变化，我就去执⾏⼀个函数
+  就是watch
+
+* vue双向数据绑定
+
+  * 实现⼀个监听器Observer，⽤来劫持并监听所有属性，如果有变动的，就通知订阅者。
+
+    Observer是⼀个数据监听器，其实现核⼼⽅法就是前⽂所说的Object.defineProperty( )。如果要对所有属性都进⾏监听的话，那么可以通过递归⽅法遍历所有属性值，并对其进⾏
+    Object.defineProperty( )处理。
+
+    需要创建⼀个可以容纳订阅者的消息订阅器Dep，订阅器Dep主要负责收集订阅者，然后再属性变化的时候执⾏对应订阅者的更新函数。所以显然订阅器需要有⼀个容器，这个容器就是list
+    将订阅器Dep添加⼀个订阅者设计在getter⾥⾯，这是为了让Watcher初始化进⾏触发，因此需要判断是否要添加订阅者，⾄于具体设计⽅案，下⽂会详细说明的。在setter函数⾥⾯，如果数据变化，就会去通知所有订阅者，订阅者们就会去执⾏对应的更新的函数。
+
+  * 实现⼀个订阅者Watcher，可以收到属性的变化通知并执⾏相应的函数，从⽽更新视图。
+
+    监听器Observer是在get函数执⾏了添加订阅者Wather的操作的，所以我们只要在订阅者Watcher初始化的时候出发对应的get函数去执⾏添加订阅者操作即可，那要如何触发get的函数，再简单不过了，只要获取对应的属性值就可以触发了，核⼼原因就是因为我们使⽤了Object.defineProperty( )进⾏数据监听。这⾥还有⼀个细节点需要处理，我们只要在订阅者Watcher初始化的时候才需要添加订阅者，所以需要做⼀个判断操作，因此可以在订阅器上做⼀下⼿脚：在Dep.target上缓存下订阅者，添加成功后再将其去掉就可以了。
+
+  * 实现⼀个解析器Compile，可以扫描和解析每个节点的相关指令，并根据初始化模板数据以及初始化相应的订阅器
+
+    虽然上⾯已经实现了⼀个双向数据绑定的例⼦，但是整个过程都没有去解析dom节点，⽽是直接固定某个节点进⾏替换数据的，所以接下来需要实现⼀个解析器Compile来做解析和绑定⼯作。解析器Compile实现步骤：
+
+    * 解析模板指令，并替换模板数据，初始化视图
+    * 将模板指令对应的节点绑定对应的更新函数，初始化相应的订阅器
+
+    为了解析模板，⾸先需要获取到dom元素，然后对含有dom元素上含有指令的节点进⾏处理，因此这个环节需要对dom操作⽐较频繁，所有可以先建⼀个fragment⽚段，将需要解析的dom节点存⼊fragment⽚段⾥再进⾏处理
+
+* Vue和React区别
+
+  Vue和React实现原理和流程基本一致，都是使用Virtual DOM + Diff算法。不管是Vue的template模板 + options api写法，还是React的Class或者Function（js 的class写法也是function函数的一种）写法，底层最终都是为了生成render函数，render函数执行返回VNode（虚拟DOM的数据结构，本质上是棵树）。当每一次UI更新时，总会根据render重新生成最新的VNode，然后跟以前缓存起来老的VNode进行比对，再使用Diff算法（框架核心）去真正更新真实DOM（虚拟DOM是JS对象结构，同样在JS引擎中，而真实DOM在浏览器渲染引擎中，所以操作虚拟DOM比操作真实DOM开销要小的多）。
+
+  Vue和React通用流程：vue template/react jsx -> render函数 -> 生成VNode -> 当有变化时，新老VNode diff -> diff算法对比，并真正去更新真实DOM。
+
+  区别：
+
+  * Vue定位简单易上手，基于template模板 + options API；React本质上核心只有一个Virtual DOM + Diff算法，所以API非常少
+  * 由于Vue定义简单易上手，能快速解决问题，所以很多常见的解决方案，是Vue官方主导开发和维护；React只关注底层，上层应用解决方案基本不插手
+  * Vue源码实现是把options挂载到Vue核心类上，然后再new Vue({options})拿到实例（vue组件的script导出的是一个挂满options的纯对象而已）；React内部实现比较简单，直接定义render函数以生成VNode
+  * Vue基于snabbdom库，它有较好的速度以及模块机制，Vue Diff使用双向指针，边对比，边更新DOM；React主要使用diff队列保存需要更新哪些DOM，得到patch树，再统一操作批量更新DOM
+  * Vue原生事件使用标准Web事件；React原生事件被包装
