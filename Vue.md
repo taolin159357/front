@@ -242,6 +242,12 @@
 
     Vue2.x中new出的实例对象，所有的东⻄都在这个vue对象上，这样其实⽆论你⽤到还是没⽤到，都会跑⼀遍。⽽vue3.0中可以⽤ES module imports按需引⼊，如：keep-alive内置组件、v-model指令，等等。
 
+* $router 和 $router 的区别
+
+  $router是去全局的一个路由实例(全局变量)，this.$router.push({path: '/login'}); // 路由跳转, 向 history 中增加一条记录，this.$router.go(-1); // 路由前进(正数)或者后退(负数), 0刷新当前页面，this.$router.replace({path: '/login'}); // 在 history记录中替换当前路径, 不记录
+
+  $router是一个跳转的路由对象(局部变量)，每一个路由都有自己的route，route中记录了当前路由的跳转的name、path、params、query; 获取的时候：this.$route.path，this.$route.query
+
 * vue 中 mixin 和 mixins 区别？
 
   mixin ⽤于全局混⼊，会影响到每个组件实例。

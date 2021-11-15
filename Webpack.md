@@ -2475,24 +2475,1024 @@
     * output.path: path.resolve(__dirname, "dist")
     * output.filename: "[name].js"
 
-* create-react-app react-project
+* React中的配置分析
 
-  本部分只讲述通过脚手架创建的项目的分析路线及步骤，具体每个文件夹里面讲述了什么内容分别在源码中进行注释讲解。
+  * 使用creact-react-app命令创建react项目
 
-  通过 npm run eject将配置文件暴露出来
+  * 运行指令npm run eject：为了更好的学习与观察webpack在react中的配置，运行该命令，该命令会将react脚手架中隐藏的webpack配置暴露出来,而且是不可逆的，并使项目根目录多出两个文件目录:config和scripts，同时package.json的启动命令发生改变
 
-  * config-->paths.js（向外暴露出路径）
-  * scripts-->start.js（开发环境对应的文件）
-  * webpack.config.js（主要内容为对loader和plugin的配置，将来自己修改的时候可以直接在这个文件夹里面进行loader和plugin的修改）（核心）
-  * scripts-->build.js（生产环境对应的文件，与开发环境对应的文件差不多）
+    * config-->paths.js（向外暴露出路径），部分代码与注释：
 
-* vue create vue-project
+      ```js
+      1、appDirectory:项目根目录
+      2、resolveApp:生成绝对路径的方法
+      3、publicUrlOrPath:所有资源的公共访问路径 -->参数为/ 对应自己当前这个服务器的地址
+      4、moduleFileExtensions:定义文件拓展名,在这里定义的拓展名会被react解析到
+      5、resolveModule:拿到上面的文件拓展名,检查文件路径是否匹配,存在则解析
+      
+      'use strict';
+      const path = require('path');
+      const fs = require('fs');
+      const getPublicUrlOrPath = require('react-dev-utils/getPublicUrlOrPath');
+      //项目根目录
+      const appDirectory = fs.realpathSync(process.cwd());
+      //生成绝对路径的方法
+      const resolveApp = relativePath => path.resolve(appDirectory, relativePath);
+      // 所有资源的公共访问路径: / -->`/`对应自己当前这个服务器的地址
+      const publicUrlOrPath = getPublicUrlOrPath(
+        process.env.NODE_ENV === 'development',
+         //当你需要修改路径的时候去`package.json`进行修改,通常是不需要的
+        require(resolveApp('package.json')).homepage,
+        process.env.PUBLIC_URL
+      );
+      const buildPath = process.env.BUILD_PATH || 'build';
+      //定义文件拓展名,在这里定义的拓展名会被react解析到
+      const moduleFileExtensions = [
+        'web.mjs', 'mjs', 'web.js','js', 'web.ts','ts','web.tsx','tsx','json','web.jsx','jsx',
+      ];
+      // 解析模块的方法:
+      //拿到上面的文件拓展名,检查文件路径是否匹配,存在则解析
+      const resolveModule = (resolveFn, filePath) => {
+        const extension = moduleFileExtensions.find(extension =>
+          fs.existsSync(resolveFn(`${filePath}.${extension}`))
+        );
+        if (extension) {return resolveFn(`${filePath}.${extension}`); }
+        return resolveFn(`${filePath}.js`);
+      };
+      // 暴露出去的路径
+      module.exports = {
+        dotenv: resolveApp('.env'),
+        appPath: resolveApp('.'),
+      	...
+      };
+      //将拓展名加至暴露出去的对象上暴露出去
+      module.exports.moduleFileExtensions = moduleFileExtensions;
+      ```
 
-  这里只讲述通过脚手架创建的项目的分析路线及步骤，具体每个文件夹里面讲述了什么内容分别在源码中进行注释。
+    * scripts-->start.js（开发环境对应的文件），用来运行开发环境配置，部分代码与注释：
 
-  通过 vue inspect --mode=development > webpack.dev.js将vue开发环境配置打包一起放在webpack.dev.js文件下面，开发环境代码只需要研究webpack.dev.js文件即可
+       ```js
+       1、定义环境变量: ① process.env.BABEL_ENV ② process.env.NODE_ENV
+       2、useYarn:判断是否使用yarn
+       3、config = configFactory('development'):引入webpack的开发环境配置
+       4、checkBrowsers:检查当前使用的是什么浏览器
+       
+       'use strict';
+       // 定义环境变量:开发环境
+       process.env.BABEL_ENV = 'development';
+       process.env.NODE_ENV = 'development';
+       // 捕获异常
+       process.on('unhandledRejection', err => { throw err;});
+       // 加载.env的环境变量:
+       require('../config/env');
+       //判断是否使用yarn
+       const useYarn = fs.existsSync(paths.yarnLockFile);
+       // 判断是否包含必要文件:publuc/index.html src/index.js 如果没有退出
+       if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {process.exit(1);}
+       // 定义默认端口号和域名
+       const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3000;
+       const HOST = process.env.HOST || '0.0.0.0';
+       const { checkBrowsers } = require('react-dev-utils/browsersHelper');
+       //检查当前使用的是什么浏览器
+       checkBrowsers(paths.appPath, isInteractive)
+         .then(() => {
+           // 检查端口号:检查当前端口号是否被占用,如果被占用自动加1
+           return choosePort(HOST, DEFAULT_PORT);
+         })
+           //webpack的开发环境配置
+           const config = configFactory('development');
+           const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
+           const appName = require(paths.appPackageJson).name;
+       	//判断是否使用typeScript
+           const useTypeScript = fs.existsSync(paths.appTsConfig);
+           const tscCompileOnError = process.env.TSC_COMPILE_ON_ERROR === 'true';
+           // 创建编译器,将所有配置传进来
+           const compiler = createCompiler({ appName,config, devSocket,urls,useYarn,useTypeScript,tscCompileOnError, webpack,});
+           // 加载package.json中的prost配置
+           const proxySetting = require(paths.appPackageJson).proxy;
+           const proxyConfig = prepareProxy( proxySetting, paths.appPublic, paths.publicUrlOrPath );
+           // 创建devServer的配置
+           const serverConfig = createDevServerConfig(
+             proxyConfig,
+             urls.lanUrlForConfig
+           );
+           const devServer = new WebpackDevServer(compiler, serverConfig);
+           // 启动服务
+           devServer.listen(port, HOST, err => {
+             if (err) {return console.log(err); }
+             .....
+       ```
 
-  通过 vue inspect --mode=production > webpack.prod.js将vue生产环境配置打包一起放在webpack.prod.js文件下面，生产环境代码只需要研究webpack.prod.js文件即可
+    * scripts-->build.js（生产环境对应的文件，与开发环境对应的文件差不多）
 
-  开发环境文件webpack.dev.js，生产环境文件webpack.prod.js（除了在css上面以及多线程打包上面进行了一些修改，其余和开发环境是一样的）
+    * webpack.config.js（主要内容为对loader和plugin的配置，将来自己修改的时候可以直接在这个文件夹里面进行loader和plugin的修改）（核心），部分代码与注释：
 
+       ```js
+       // 是否生成map文件
+       // cross-env修改
+       const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false";
+       // 是否内联runtime文件
+       const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== "false";
+       // 最小转化base64的图片大小
+       const imageInlineSizeLimit = parseInt(	process.env.IMAGE_INLINE_SIZE_LIMIT || "10000");
+       // 样式文件正则
+       const cssRegex = /\.css$/;
+       const cssModuleRegex = /\.module\.css$/;
+       const sassRegex = /\.(scss|sass)$/;
+       // 生成最终webpack开发或生产环境配置的函数
+       module.exports = function (webpackEnv) {
+           // 获取环境变量的方法
+       	// 加载.env文件的环境变量，REACT_APP_开头
+       	const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
+           	// 获取处理样式文件loader的函数
+       	const getStyleLoaders = (cssOptions, preProcessor) => {}
+          // webpack配置对象
+       	return {
+       		mode: isEnvProduction ? "production" : isEnvDevelopment && "development",
+       		// 如果该变量为true(生产环境),则代码出错终止打包
+       		bail: isEnvProduction,
+       		devtool: isEnvProduction? shouldUseSourceMap? "source-map" // 生产环境
+       				: false: isEnvDevelopment && "cheap-module-source-map", // 开发环境
+           }
+           // 添加 /* filename */ 注释到输出的文件中
+       	pathinfo: isEnvDevelopment,
+           // 默认 / ，可以通过package.json.homepage.
+       	publicPath: paths.publicUrlOrPath,
+                // 启用压缩
+           optimization: {
+       		minimize: isEnvProduction,
+       		minimizer: [new TerserPlugin({})]// 压缩js
+              }
+           
+       	// 是否内联runtime文件：少发一个请求
+       	isEnvProduction &&
+       		shouldInlineRuntimeChunk &&
+       		new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime-.+[.]js/]),
+       	// 解析index.html中 &PULBLIC_URL%
+       	new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
+       	// 给ModuleNotFound更好提示
+       	new ModuleNotFoundPlugin(paths.appPath),
+       	// 定义环境变量
+       	new webpack.DefinePlugin(env.stringified),
+       	// 开发环境下：HMR功能
+       	isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
+       	// 文件路径：严格区分大小写
+       	isEnvDevelopment && new CaseSensitivePathsPlugin(),
+       	// 监视node_modules，一旦发生变化可以重启dev server
+       	// See https://github.com/facebook/create-react-app/issues/186
+       	isEnvDevelopment &&
+       		new WatchMissingNodeModulesPlugin(paths.appNodeModules),
+       		// 提取css成单独文件
+       	isEnvProduction &&
+       		new MiniCssExtractPlugin({})
+       
+       }
+       ```
+
+* Vue中的配置分析
+
+  将基于脚手架4.x版本的vue2.x配置进行分析,大致内容与react无太大区别
+
+  * 卸载老版本vuecli（1.x， 2.x）:npm uninstall vue-cli -g或者yarn global remove vue-cli
+  * 安装最新的vuecli:npm install -g @vue/cli
+  * vue create project-name,选择创建vue2.x,vue2与3版本的weback配置差不多
+  * vue并没有提供将webpack配置直接暴露出来的命令,但是提供了另外一种方法让我们能审查vue里面的配置,通过指令将单独的配置单独打包成单独的文件
+    * vue inspect --mode=development > webpack.dev.js :将vue开发环境配置打包一起放在webpack.dev.js文件下面，开发环境代码只需要研究webpack.dev.js文件即可
+    * vue inspect --mode=production > webpack.prod.js :将vue生产环境配置打包一起放在webpack.prod.js文件下面，生产环境代码只需要研究webpack.prod.js文件即可
+    * 生成后的文件会报错,想要取消报错,在最前面用module.exports=将其暴露出去,就不会报错了
+
+* loader
+
+  * 编写一个简单的loader
+
+    loader本质上是一种函数,此处创建一个js编写loader
+
+    ```js
+    //loader1.js
+    module.exports = function (content, map, meta) {
+      console.log(content,"------------------------------------");
+      return content
+    }
+    ```
+
+    如不配置loader解析规则，默认路径是node_modules，所以平时使用style-loader等都不用加路径
+
+    ```js
+    //webpack.config.js
+    const path = require('path');
+    module.exports = {
+      module: {
+        rules: [
+          {
+            test: /\.js$/,
+            loader: 'loader1',//当配置了liader解析规则后写法
+            // loader:path.resolve(__dirname,'loaders','loader1') //不写resolveLoader配置的写法
+          }
+        ]
+      },
+      // 配置loader解析规则,默认路径是`node_modules`
+      resolveLoader: {
+        modules: [
+          'node_modules',
+          path.resolve(__dirname, 'loaders')
+        ]
+      }
+    }
+    ```
+
+  * loader的执行顺序
+
+    * loader是从上往下编译，编译结束后运行的顺序是从下往上，从右往左 执行
+
+    * 当你有写loader想要先行运行的话，可以加在pitch方法上；loader里面有一个pitch方法，use数组中pitch方法的执行顺序是从上往下执行，因此我们如果想先执行某些功能，可以先在pitch方法中定义
+
+      ```js
+      module.exports = function (content, map, meta) {
+        console.log(111111,"------------------------------------");
+        return content
+      }
+      module.exports.pitch = function () {//编译时从上往下调用
+        console.log('pitch 111');
+      }
+      ```
+
+  * 同步&异步loader
+
+    * this.callback():同步的方法 -->可以替代return
+
+      ```js
+      module.exports = function (content, map, meta) {
+        console.log(111111,"------------------------------------");
+        this.callback(null, content, map, meta);
+      	//是否有错误,需要传递的内容(处理后的内容) ,可选参数,可选参数
+      }
+      ```
+
+    * this.async():异步的方法
+
+      使用this.async()方法会使整个loader停住,只有当你再次调用callback方法才会继续执行,整体性能会好过同步,推荐使用
+
+      ```js
+      // 异步loader
+      module.exports = function (content, map, meta) {
+        console.log(222);
+        const callback = this.async();
+        setTimeout(() => {
+          callback(null, content);
+        }, 1000)
+      }
+      ```
+
+  * 获取&校验loader的options
+
+    需要下载依赖:npm i loader-utils -D，需要下载依赖:schema-utils，创建schema.json文件校验规则并引入使用
+
+    ```js
+    //webpack.config.js传入
+    {	loader: 'loader3',
+        options: {
+            name: 'jack',
+            age: 18 //当校验文件追加属性调为false,将会报错
+        }
+    }
+    ------------------------------------------------------------------------------------
+    //loader3.js
+    // loader本质上是一个函数
+    const { getOptions } = require('loader-utils');
+    const { validate } = require('schema-utils');
+    const schema = require('./schema');
+    module.exports = function (content, map, meta) {
+      // 获取options
+      const options = getOptions(this);
+      console.log(333, options);
+      // 校验options是否合法
+      validate(schema, options, {
+        name: 'loader3'
+      })
+      return content;
+    }
+    ```
+
+    校验文件:定义校验规则
+
+    ```js
+    {
+      "type": "object",//指定options的类型
+      "properties": { //定义options里面有什么属性
+        "name": {	//定义有name类型
+          "type": "string",	
+          "description": "名称～"	//定义描述,可以随便写
+        }
+      },
+      "additionalProperties": false //代表是否可以运行追加其他属性
+    }
+    ```
+
+  * 自定义babel-loader
+
+    自定义babel-loader,并不是工作中的babel配置
+
+    创建校验规则babelSchema.json
+
+    ```json
+    {
+      "type": "object",
+      "properties": {
+        "presets": {
+          "type": "array"
+        }
+      },
+      "addtionalProperties": true
+    }
+    ```
+
+    创建loader，babelLoader.js
+
+    ```js
+    const { getOptions } = require('loader-utils');
+    const { validate } = require('schema-utils');
+    const babel = require('@babel/core');
+    const util = require('util');
+    
+    const babelSchema = require('./babelSchema.json');
+    
+    // babel.transform用来编译代码的方法
+    // 是一个普通异步方法
+    // util.promisify将普通异步方法转化成基于promise的异步方法
+    const transform = util.promisify(babel.transform);
+    
+    module.exports = function (content, map, meta) {
+      // 获取loader的options配置
+      const options = getOptions(this) || {};
+      // 校验babel的options的配置
+      validate(babelSchema, options, {
+        name: 'Babel Loader'
+      });
+    
+      // 创建异步
+      const callback = this.async();
+    
+      // 使用babel编译代码
+      transform(content, options)
+        .then(({code, map}) => callback(null, code, map, meta))
+        .catch((e) => callback(e))
+    
+    }
+    ```
+
+    babelLoader使用，webpack.config.js
+
+    ```js
+    const path = require('path');
+    
+    module.exports = {
+        module: {
+          rules: [{
+            test: /\.js$/,
+            loader: 'babelLoader',
+            options: {
+              presets: [
+                '@babel/preset-env'
+              ]
+            }
+          }]
+        },
+        // 配置loader解析规则：我们的loader去哪个文件夹下面寻找（这里表示的是同级目录的loaders文件夹下面寻找）
+        resolveLoader: {
+          modules: [
+            'node_modules',
+            path.resolve(__dirname, 'loaders')
+          ]
+        }
+      }
+    ```
+
+* plugins
+
+  * tabaple：增强版的发布订阅模式，tapable并没有具体的业务逻辑，是一个专门用来实现事件订阅或者他自己称为hook(钩子)的工具库，其根本原理还是发布订阅模式，但是他实现了多种形式的发布订阅模式，还包含了多种形式的流程控制。tapable是webpack的核心模块，也是webpack团队维护的，是webpack plugin的基本实现方式。他的主要功能是为使用者提供强大的hook机制，webpack plugin就是基于hook的。
+
+    ```js
+    const {
+    	SyncHook,
+    	SyncBailHook,
+    	SyncWaterfallHook,
+    	SyncLoopHook,
+    	AsyncParallelHook,
+    	AsyncParallelBailHook,
+    	AsyncSeriesHook,
+    	AsyncSeriesBailHook,
+    	AsyncSeriesWaterfallHook
+     } = require("tapable");
+    这些API的名字其实就解释了他的作用，注意这些关键字：Sync, Async, Bail, Waterfall, Loop, Parallel, Series。下面分别来解释下这些关键字：
+    
+    Sync：这是一个同步的hook
+    
+    Async：这是一个异步的hook
+    
+    Bail：Bail在英文中的意思是保险，保障的意思，实现的效果是，当一个hook注册了多个回调方法，任意一个回调方法返回了不为undefined的值，就不再执行后面的回调方法了，就起到了一个“保险丝”的作用。
+    
+    Waterfall：Waterfall在英语中是瀑布的意思，在编程世界中表示顺序执行各种任务，在这里实现的效果是，当一个hook注册了多个回调方法，前一个回调执行完了才会执行下一个回调，而前一个回调的执行结果会作为参数传给下一个回调函数。
+    
+    Loop：Loop就是循环的意思，实现的效果是，当一个hook注册了回调方法，如果这个回调方法返回了true就重复循环这个回调，只有当这个回调返回undefined才执行下一个回调。
+    
+    Parallel：Parallel是并行的意思，有点类似于Promise.all，就是当一个hook注册了多个回调方法，这些回调同时开始并行执行。
+    
+    Series：Series就是串行的意思，就是当一个hook注册了多个回调方法，前一个执行完了才会执行下一个。
+    
+    Parallel和Series的概念只存在于异步的hook中，因为同步hook全部是串行的。
+    ```
+
+    * 安装tapable：npm install tapable -D
+
+    * 初始化hooks容器 2.1 同步hooks，任务会依次执行:SyncHook、SyncBailHook 2.2 异步hooks，异步并行：AsyncParallelHook，异步串行：AsyncSeriesHook
+
+    * 往hooks容器中注册事件/添加回调函数
+
+    * 触发hooks
+
+    * 启动文件：node tapable.test.js
+
+      ```js
+      //文件tapable.test.js
+      const { SyncHook, SyncBailHook, AsyncParallelHook, AsyncSeriesHook } = require('tapable');
+      
+      class Lesson {
+      constructor() {
+        // 初始化hooks容器
+        this.hooks = {
+          // 同步hooks，任务会依次执行
+          // go: new SyncHook(['address'])
+          // SyncBailHook：一旦有返回值就会退出～
+          go: new SyncBailHook(['address']),
+      
+          // 异步hooks
+          // AsyncParallelHook：异步并行
+          // leave: new AsyncParallelHook(['name', 'age']),
+          // AsyncSeriesHook: 异步串行
+          leave: new AsyncSeriesHook(['name', 'age'])
+        }
+      }
+      tap() {
+        // 往hooks容器中注册事件/添加回调函数
+        this.hooks.go.tap('class0318', (address) => {
+          console.log('class0318', address);
+          return 111;
+        })
+        this.hooks.go.tap('class0410', (address) => {
+          console.log('class0410', address);
+        })
+      
+        // tapAsync常用，有回调函数
+        this.hooks.leave.tapAsync('class0510', (name, age, cb) => {
+          setTimeout(() => {
+            console.log('class0510', name, age);
+            cb();
+          }, 2000)
+        })
+        // 需要返回promise
+        this.hooks.leave.tapPromise('class0610', (name, age) => {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              console.log('class0610', name, age);
+              resolve();
+            }, 1000)
+          })
+        })
+      }
+      
+      start() {
+        // 触发hooks
+        this.hooks.go.call('c318');
+        this.hooks.leave.callAsync('jack', 18, function () {
+          // 代表所有leave容器中的函数触发完了，才触发
+          console.log('end~~~');
+        });
+      }
+      }
+      
+      const l = new Lesson();
+      l.tap();
+      l.start();
+      ```
+
+  * compiler钩子
+
+    * 工作方式：异步串行执行，因此下面代码输出顺序如下：1.1 emit.tap 111，1.2 1秒后输出 emit.tapAsync 111，1.3 1秒后输出 emit.tapPromise 111，1.4 afterEmit.tap 111，1.5 done.tap 111
+
+    * tapAsync和tapPromise表示异步
+
+    * 这边只简单介绍了几个complier,具体开发的过程中可以根据文档介绍编写（很方便的）
+
+      ```js
+      class Plugin1 {
+        apply(complier) {
+      
+          complier.hooks.emit.tap('Plugin1', (compilation) => {
+            console.log('emit.tap 111');
+          })
+      
+          complier.hooks.emit.tapAsync('Plugin1', (compilation, cb) => {
+            setTimeout(() => {
+              console.log('emit.tapAsync 111');
+              cb();
+            }, 1000)
+          })
+      
+          complier.hooks.emit.tapPromise('Plugin1', (compilation) => {
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                console.log('emit.tapPromise 111');
+                resolve();
+              }, 1000)
+            })
+          })
+      
+          complier.hooks.afterEmit.tap('Plugin1', (compilation) => {
+            console.log('afterEmit.tap 111');
+          })
+      
+          complier.hooks.done.tap('Plugin1', (stats) => {
+            console.log('done.tap 111');
+          })
+      
+        }
+      }
+      
+      module.exports = Plugin1;
+      ```
+
+  * compilation钩子
+
+    nodejs环境中调试
+
+    ```json
+    "scripts": {
+        "start": "node --inspect-brk ./node_modules/webpack/bin/webpack.js"
+      }
+    --inspect-brk 表示通过断点的方式调试
+    node 表示通过node运行
+    ./node_modules/webpack/bin/webpack.js" 表示调试这个文件
+    ```
+
+    * 初始化compilation钩子
+
+    * 往要输出资源中，添加一个a.txt文件
+
+    * 读取b.txt中的内容，将b.txt中的内容添加到输出资源中的b.txt文件中，3.1 读取b.txt中的内容需要使用node的readFile模块，3.2  将b.txt中的内容添加到输出资源中的b.txt文件中除了使用 2 中的方法外，还有两种形式可以使用，3.2.1 借助RawSource，3.2.2 借助RawSource和emitAsset
+
+      ```js
+      const fs = require('fs');
+      const util = require('util');
+      const path = require('path');
+      
+      const webpack = require('webpack');
+      const { RawSource } = webpack.sources;
+      
+      // 将fs.readFile方法变成基于promise风格的异步方法
+      const readFile = util.promisify(fs.readFile);
+      
+      /*
+        1. 初始化compilation钩子
+        2. 往要输出资源中，添加一个a.txt文件
+        3. 读取b.txt中的内容，将b.txt中的内容添加到输出资源中的b.txt文件中
+            3.1 读取b.txt中的内容需要使用node的readFile模块
+            3.2  将b.txt中的内容添加到输出资源中的b.txt文件中除了使用 2 中的方法外，还有两种形式可以使用
+                3.2.1 借助RawSource
+                3.2.2 借助RawSource和emitAsset
+      */
+      
+      class Plugin2 {
+      
+        apply(compiler) {
+          // 1.初始化compilation钩子
+          compiler.hooks.thisCompilation.tap('Plugin2', (compilation) => {
+            // debugger
+            // console.log(compilation);
+            // 添加资源
+            compilation.hooks.additionalAssets.tapAsync('Plugin2', async (cb) => {
+              // debugger
+              // console.log(compilation);
+      
+              const content = 'hello plugin2';
+      
+              // 2.往要输出资源中，添加一个a.txt
+              compilation.assets['a.txt'] = {
+                // 文件大小
+                size() {
+                  return content.length;
+                },
+                // 文件内容
+                source() {
+                  return content;
+                }
+              }
+      
+              const data = await readFile(path.resolve(__dirname, 'b.txt'));
+      
+              // 3.2.1 compilation.assets['b.txt'] = new RawSource(data);
+              // 3.2.1
+              compilation.emitAsset('b.txt', new RawSource(data));
+      
+              cb();
+      
+            })
+          })
+      
+        }
+      
+      }
+      
+      module.exports = Plugin2;
+      ```
+
+  * 总结：
+
+    Compiler类(./lib/Compiler.js)：webpack的主要引擎，扩展自Tapable。webpack 从执行到结束，Compiler只会实例化一次。生成的 compiler 对象记录了 webpack 当前运行环境的完整的信息，该对象是全局唯一的，插件可以通过它获取到 webpack config 信息，如entry、output、loaders等配置。
+
+    Compilation类(./lib/Compilation.js)：扩展自Tapable，也提供了很多关键点回调供插件做自定义处理时选择使用拓展。一个 compilation 对象代表了一次单一的版本构建和生成资源，它储存了当前的模块资源、编译生成的资源、变化的文件、以及被跟踪依赖的状态信息。简单来说，Compilation的职责就是对所有 require 图(graph)中对象的字面上的编译，构建 module 和 chunk，并利用插件优化构建过程，同时把本次打包编译的内容全存到内存里。compilation 编译可以多次执行，如在watch模式下启动 webpack，每次监测到源文件发生变化，都会重新实例化一个compilation对象，从而生成一组新的编译资源。这个对象可以访问所有的模块和它们的依赖（大部分是循环依赖）。
+
+  * Compiler 和 Compilation 的区别
+
+    * compiler 对象代表的是构建过程中不变的 webpack 环境，整个 webpack 从启动到关闭的生命周期。针对的是webpack。
+    * compilation 对象只代表一次新的编译，只要项目文件有改动，compilation 就会被重新创建。针对的是随时可变的项目文件。
+
+  * 自定义CopyWebpackPlugin
+
+    CopyWebpackPlugin的功能：将public文件夹中的文件复制到dist文件夹下面（忽略index.html文件）
+
+    * 创建schema.json校验文件
+
+      ```json
+      {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "ignore": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      }
+      ```
+
+    * 创建CopyWebpackPlugin.js插件文件
+
+      编码思路：下载schema-utils和globby：npm install globby schema-utils -D，将from中的资源复制到to中，输出出去，过滤掉ignore的文件，读取paths中所有资源，生成webpack格式的资源，添加compilation中，输出出去
+
+      ```js
+      const path = require('path');
+      const fs = require('fs');
+      const {promisify} = require('util')
+      
+      const { validate } = require('schema-utils');
+      const globby = require('globby');// globby用来匹配文件目标
+      const webpack = require('webpack');
+      
+      const schema = require('./schema.json');
+      const { Compilation } = require('webpack');
+      
+      const readFile = promisify(fs.readFile);
+      const {RawSource} = webpack.sources
+      
+      class CopyWebpackPlugin {
+        constructor(options = {}) {
+          // 验证options是否符合规范
+          validate(schema, options, {
+            name: 'CopyWebpackPlugin'
+          })
+      
+          this.options = options;
+        }
+        apply(compiler) {
+          // 初始化compilation
+          compiler.hooks.thisCompilation.tap('CopyWebpackPlugin', (compilation) => {
+            // 添加资源的hooks
+            compilation.hooks.additionalAssets.tapAsync('CopyWebpackPlugin', async (cb) => {
+              // 将from中的资源复制到to中，输出出去
+              const { from, ignore } = this.options;
+              const to = this.options.to ? this.options.to : '.';
+              
+              // context就是webpack配置
+              // 运行指令的目录
+              const context = compiler.options.context; // process.cwd()
+              // 将输入路径变成绝对路径
+              const absoluteFrom = path.isAbsolute(from) ? from : path.resolve(context, from);
+      
+              // 1. 过滤掉ignore的文件
+              // globby(要处理的文件夹，options)
+              const paths = await globby(absoluteFrom, { ignore });
+      
+              console.log(paths); // 所有要加载的文件路径数组
+      
+              // 2. 读取paths中所有资源
+              const files = await Promise.all(
+                paths.map(async (absolutePath) => {
+                  // 读取文件
+                  const data = await readFile(absolutePath);
+                  // basename得到最后的文件名称
+                  const relativePath = path.basename(absolutePath);
+                  // 和to属性结合
+                  // 没有to --> reset.css
+                  // 有to --> css/reset.css(对应webpack.config.js中CopyWebpackPlugin插件的to的名称css)
+                  const filename = path.join(to, relativePath);
+      
+                  return {
+                    // 文件数据
+                    data,
+                    // 文件名称
+                    filename
+                  }
+                })
+              )
+      
+              // 3. 生成webpack格式的资源
+              const assets = files.map((file) => {
+                const source = new RawSource(file.data);
+                return {
+                  source,
+                  filename: file.filename
+                }
+              })
+              
+              // 4. 添加compilation中，输出出去
+              assets.forEach((asset) => {
+                compilation.emitAsset(asset.filename, asset.source);
+              })
+      
+              cb();
+            })
+          })
+        }
+      
+      }
+      
+      module.exports = CopyWebpackPlugin;
+      ```
+
+    * 在webpack.config.js中使用
+
+* 自定义webpack
+
+  * webpack执行流程
+
+    * 初始化 Compiler：webpack(config) 得到 Compiler 对象
+    * 开始编译：调用 Compiler 对象 run 方法开始执行编译
+    * 确定入口：根据配置中的 entry 找出所有的入口文件。
+    * 编译模块：从入口文件出发，调用所有配置的 Loader 对模块进行编译，再找出该模块依赖的模块，递归直到所有模块被加载进来
+    * 完成模块编译： 在经过第 4 步使用 Loader 编译完所有模块后，得到了每个模块被编译后的最终内容以及它们之间的依赖关系。
+    * 输出资源：根据入口和模块之间的依赖关系，组装成一个个包含多个模块的 Chunk，再把每个 Chunk 转换成一个单独的文件加入到输出列表。（注意：这步是可以修改输出内容的最后机会）
+    * 输出完成：在确定好输出内容后，根据配置确定输出的路径和文件名，把文件内容写入到文件系统
+
+  * 准备工作
+
+    * 创建文件夹myWebpack
+    * 创建src-->(add.js / count.js / index.js)，写入对应的js代码
+    * 创建config-->webpack.config.js写入webpack基础配置（entry和output）
+    * 创建lib文件夹，里面写webpack的主要配置
+    * 创建script-->build.js（将lib文件夹下面的myWebpack核心代码和config文件下的webpack基础配置引入并调用run()函数开始打包）
+    * 为了方便启动，控制台通过输入命令 npm init -y拉取出package.json文件，修改文件中scripts部分为"build": "node ./script/build.js"表示通过在终端输入命令npm run build时会运行/script/build.js文
+    * 如果需要断点调试:在scripts中添加"debug": "node --inspect-brk ./script/build.js"表示通过在终端输入命令npm run debug时会调试/script/build.js文件中的代码
+
+  * 使用babel解析文件
+
+    * 创建文件lib-->myWebpack1-->index.js
+    * 下载三个babel包
+      * npm install @babel/parser -D用来将代码解析成ast抽象语法树
+      * npm install @babel/traverse -D用来遍历ast抽象语法树代码
+      * npm install @babel/core-D用来将代码中浏览器不能识别的语法进行编译
+
+    编码思路：读取入口文件内容，将其解析成ast抽象语法树，收集依赖，编译代码：将代码中浏览器不能识别的语法进行编译
+
+    index.js
+
+    ```js
+    const fs = require('fs');
+    const path = require('path');
+    
+    // babel的库
+    const babelParser = require('@babel/parser');
+    const traverse = require('@babel/traverse').default;
+    const { transformFromAst } = require('@babel/core');
+    
+    function myWebpack(config) {
+      return new Compiler(config);
+    }
+    
+    class Compiler {
+      constructor(options = {}) {
+        this.options = options;
+      }
+      // 启动webpack打包
+      run() {
+        // 1. 读取入口文件内容
+        // 入口文件路径
+        const filePath = this.options.entry;
+        const file = fs.readFileSync(filePath, 'utf-8');
+        // 2. 将其解析成ast抽象语法树
+        const ast = babelParser.parse(file, {
+          sourceType: 'module' // 解析文件的模块化方案是 ES Module
+        })
+        // debugger;
+        console.log(ast);
+    
+        // 获取到文件文件夹路径
+        const dirname = path.dirname(filePath);
+    
+        // 定义存储依赖的容器
+        const deps = {}
+    
+        // 3. 收集依赖
+        traverse(ast, {
+          // 内部会遍历ast中program.body，判断里面语句类型
+          // 如果 type：ImportDeclaration 就会触发当前函数
+          ImportDeclaration({node}) {
+            // 文件相对路径：'./add.js'
+            const relativePath = node.source.value;
+            // 生成基于入口文件的绝对路径
+            const absolutePath = path.resolve(dirname, relativePath);
+            // 添加依赖
+            deps[relativePath] = absolutePath;
+          }
+        })
+    
+        console.log(deps);
+    
+        // 4. 编译代码：将代码中浏览器不能识别的语法进行编译
+        const { code } = transformFromAst(ast, null, {
+          presets: ['@babel/preset-env']
+        })
+    
+        console.log(code);
+      }
+    }
+    
+    module.exports = myWebpack;
+    ```
+
+  * 模块化
+
+    我们开发代码过程中讲究的是模块化开发，不同功能的代码放在不同的文件中 创建myWebpack2-->parser.js（放入解析代码）/Compiler.js（放入编译代码）/index.js（主文件）
+
+  * 收集所有的依赖
+
+    所有代码位于myWebpack文件夹中 Compiler.js文件中build函数用于构建代码，run函数中modules通过递归遍历收集所有的依赖，depsGraph用于将依赖整理更好依赖关系图（具体的代码功能都在代码中进行了注释）
+
+  * 生成打包之后的bundle
+
+    代码位于myWebpack-->Compiler.js中的bundle部分 整个myWebpack-->Compiler.js代码
+
+    ```js
+    const path = require('path');
+    const fs = require('fs');
+    const {
+      getAst,
+      getDeps,
+      getCode
+    } = require('./parser')
+    
+    class Compiler {
+      constructor(options = {}) {
+          // webpack配置对象
+          this.options = options;
+          // 所有依赖的容器
+          this.modules = [];
+        }
+        // 启动webpack打包
+      run() {
+        // 入口文件路径
+        const filePath = this.options.entry;
+    
+        // 第一次构建，得到入口文件的信息
+        const fileInfo = this.build(filePath);
+    
+        this.modules.push(fileInfo);
+    
+        // 遍历所有的依赖
+        this.modules.forEach((fileInfo) => {
+          /**
+           {
+              './add.js': '/Users/xiongjian/Desktop/atguigu/code/05.myWebpack/src/add.js',
+              './count.js': '/Users/xiongjian/Desktop/atguigu/code/05.myWebpack/src/count.js'
+            } 
+           */
+          // 取出当前文件的所有依赖
+          const deps = fileInfo.deps;
+          // 遍历
+          for (const relativePath in deps) {
+            // 依赖文件的绝对路径
+            const absolutePath = deps[relativePath];
+            // 对依赖文件进行处理
+            const fileInfo = this.build(absolutePath);
+            // 将处理后的结果添加modules中，后面遍历就会遍历它了～（递归遍历）
+            this.modules.push(fileInfo);
+          }
+    
+        })
+    
+        console.log(this.modules);
+    
+        // 将依赖整理更好依赖关系图
+        /*
+          {
+            'index.js': {
+              code: 'xxx',
+              deps: { 'add.js': "xxx" }
+            },
+            'add.js': {
+              code: 'xxx',
+              deps: {}
+            }
+          }
+        */
+        const depsGraph = this.modules.reduce((graph, module) => {
+          return {
+            ...graph,
+            [module.filePath]: {
+              code: module.code,
+              deps: module.deps
+            }
+          }
+        }, {})
+    
+        console.log(depsGraph);
+    
+        this.generate(depsGraph)
+    
+      }
+    
+      // 开始构建
+      build(filePath) {
+        // 1. 将文件解析成ast
+        const ast = getAst(filePath);
+        // 2. 获取ast中所有的依赖
+        const deps = getDeps(ast, filePath);
+        // 3. 将ast解析成code
+        const code = getCode(ast);
+    
+        return {
+          // 文件路径
+          filePath,
+          // 当前文件的所有依赖
+          deps,
+          // 当前文件解析后的代码
+          code
+        }
+      }
+    
+      // 生成输出资源
+      generate(depsGraph) {
+    
+        /* index.js的代码
+          "use strict";\n' +
+          '\n' +
+          'var _add = _interopRequireDefault(require("./add.js"));\n' +
+          '\n' +
+          'var _count = _interopRequireDefault(require("./count.js"));\n' +
+          '\n' +
+          'function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }\n' +
+          '\n' +
+          'console.log((0, _add["default"])(1, 2));\n' +
+          'console.log((0, _count["default"])(3, 1));
+        */
+    
+        const bundle = `
+          (function (depsGraph) {
+            // require目的：为了加载入口文件
+            function require(module) {
+              // 定义模块内部的require函数
+              function localRequire(relativePath) {
+                // 为了找到要引入模块的绝对路径，通过require加载
+                return require(depsGraph[module].deps[relativePath]);
+              }
+              // 定义暴露对象（将来我们模块要暴露的内容）
+              var exports = {};
+    
+              (function (require, exports, code) {
+                eval(code);
+              })(localRequire, exports, depsGraph[module].code);
+              
+              // 作为require函数的返回值返回出去
+              // 后面的require函数能得到暴露的内容
+              return exports;
+            }
+            // 加载入口文件
+            require('${this.options.entry}');
+    
+          })(${JSON.stringify(depsGraph)})
+        `
+          // 生成输出文件的绝对路径
+        const filePath = path.resolve(this.options.output.path, this.options.output.filename)
+          // 写入文件
+        fs.writeFileSync(filePath, bundle, 'utf-8');
+      }
+    }
+    
+    module.exports = Compiler;
+    ```
+
+    
