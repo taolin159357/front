@@ -357,6 +357,12 @@
     * 最小值：Number.MIN_VALUE，这个值为： 5e-324
     * 如果使用 Number 表示的变量超过了最大值，则会返回Infinity。无穷大（正无穷）：Infinity；无穷小（负无穷）：-Infinity。注意：typeof Infinity的返回结果是number。typeof NaN的返回结果是 number。Undefined和任何数值计算的结果为 NaN。NaN 与任何值都不相等，包括 NaN 本身。
 
+* .?、??、??=的用法和含义
+
+  * .?这个就叫做可选链，let b = a?.name表达的意思只有当a存在,同时a具有name属性的时候,才会把值赋给b,否则就会将undefined赋值给b.重要的是,不管a存在与否,这么做都不会报错.
+  * b = a ?? c当a除了undefined、或者null之外的任何值,b都会等于a,否则就等于c.
+  * b ??= a当??=左侧的值为null、undefined的时候,才会将右侧变量的值赋值给左侧变量.其他所有值都不会进行赋值.
+
 * 什么函数才是回调函数？你定义的，你没有调，但最终它执行了(在某个时刻或某个条件下)
 
 * IIFE全称: Immediately-Invoked Function Expression，作用：隐藏实现；不会污染外部(全局)命名空间；用它来编码js模块。

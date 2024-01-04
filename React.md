@@ -157,11 +157,11 @@
 
     Hook：Hook是React 16.8.0版本增加的新特性/新语法，可以让你在函数组件中使用 state 以及其他的 React 特性
 
-    三个常用的Hook
+    六个常用的Hook
 
     * State Hook
 
-      State Hook让函数组件也可以有state状态, 并进行状态数据的读写操作
+      State Hook让函数组件也可以有state状态, 并进行状态数据的读写操作，class组件中this.setState更新是state是合并， useState中setState是替换。
 
       语法: const [xxx, setXxx] = React.useState(initValue)，useState()说明：参数: 第一次初始化指定的值在内部作缓存；返回值: 包含2个元素的数组, 第1个为内部当前状态值, 第2个为更新状态值的函数
 
@@ -191,11 +191,204 @@
        	componentWillUnmount() 
       ```
 
+    * Context Hook：跨组件共享数据
+
+      React.createContext();创建一个TestContext对象，TestContext.Provider包裹子组件，数据放在<TestContext.Provider value={value}>的value中，子组件中通过useContext(TestContext)获取值，但在TestContext中的共享数据只要发生变化，子组件都会重新渲染，子组件如果并没有绑定数据，不希望他做无意义的渲染，可以使用React.memo解决
+
+      ```jsx
+      import React, { useContext, useState } from 'react';
+      const TestContext = React.createContext();
+      const Parent = () => {
+          const [value, setValue] = useState(0);
+          return (
+              <div>
+                  {(() => console.log("Parent-render"))()}
+                  <button onClick={() => setValue(value + 1)}>value + 1</button>
+                  <TestContext.Provider value={value}>
+                      <Child1 />
+                      <Child2 />
+                  </TestContext.Provider>
+              </div>
+          );
+      }
+      const Child1 = () => {
+          const value = useContext(TestContext);
+          return (
+              <div>
+                  {(() => console.log('Child1-render'))()}
+                  <h3>Child1-value: {value}</h3>
+              </div>
+          );
+      }
+      const Child2 = React.memo(() => {
+          return (
+              <div>
+                  {(() => console.log('Child2-render'))()}
+                  <h3>Child2</h3>
+              </div>
+          );
+      });
+      ```
+
+    * Callback Hook：性能优化
+
+      useCallback返回的是一个 memoized（缓存）函数，在依赖不变的情况下,多次定义的时候,返回的值是相同的，他的实现原理是当使用一组参数初次调用函数时，会缓存参数和计算结果，当再次使用相同的参数调用该函数时，会直接返回相应的缓存结果。
+
+      useCallback返回的是一个memoized回调函数，仅在其中绑定的一个依赖项变化后才更改可防止不必要的渲染，在跨组件共享数据中举例的事件是在父组件中点击触发，而现在是使用状态提升，在父组件中传递方法供子组件调用，每次render时函数也会变化，导致子组件重新渲染，上面例子useCallback将函数进行包裹，依赖值未发生变化时会返回缓存的函数，配合React.memo即可优化无意义的渲染。
+
+      ```jsx
+      import React, { useState, useCallback, memo } from 'react';
+      const Parent = () => {
+          const [value1, setValue1] = useState(0);
+          const [value2, setValue2] = useState(0);
+          const handleClick1 = useCallback(()=> {
+              setValue1(value1 + 1);
+          }, [value1]);
+          const handleClick2 = useCallback(()=> {
+              setValue2(value2 + 1);
+          }, [value2]);
+          return (
+              <>
+                  {(() => console.log("Parent-render"))()}
+                  <h3>{value1}</h3>
+                  <h3>{value2}</h3>
+                  <Child1 handleClick1={handleClick1} />
+                  <Child2 handleClick2={handleClick2} />
+              </>
+          );
+      }
+      const Child1 = memo(props => {
+          return (
+              <div>
+                  {(() => console.log("Child1-render"))()}
+                  <button onClick={() => props.handleClick1()}>value1 + 1</button>
+              </div>
+          );
+      });
+      const Child2 = memo(props => {
+          return (
+              <div>
+                  {(() => console.log("Child2-render"))()}
+                  <button onClick={() => props.handleClick2()}>value2 + 1</button>
+              </div>
+          );
+      });
+      export default Parent
+      ```
+
+    * Memo Hook：性能优化
+
+      传入 useMemo 的函数会在渲染期间执行(useCallback同理)，所以使用useMemo就能解决DOM改变的时候，控制某些函数不被触发。不要在useMemo这个函数内部执行与渲染无关的操作，诸如副作用这类的操作属于 useEffect 的适用范畴，而不是 useMemo
+
+      useMemo和useCallback的共同点：
+
+      * 接收的参数都是一样的，第一个是回调函数，第二个是依赖的数据
+      * 它们都是当依赖的数据发生变化时才会重新计算结果，起到了缓存作用
+
+      useMemo和useCallback的区别：
+
+      * useMemo计算结果是return回来的值，通常用于缓存计算结果的值
+      * useCallback计算结果是一个函数，通常用于缓存函数
+
+      ```jsx
+      import React, { useState, useMemo } from 'react'
+      const Test = ()=> {
+          const [value, setValue] = useState(0);
+          const [count, setCount] = useState(1);
+          const getDoubleCount = useMemo(() => {
+              console.log('getDoubleCount进行计算了');
+              return count * 2;
+          },[count]);
+          return (
+              <div>
+                  <h2>value: {value}</h2>
+                  <h2>doubleCount: {getDoubleCount}</h2>
+                  <button onClick={() => setValue(value + 1)}>value+1</button>
+              </div>
+          )
+      }
+      export default Test
+      ```
+
     * Ref Hook：Ref Hook可以在函数组件中存储/查找组件内的标签或任意其它数据
 
       语法：const refContainer = useRef()
 
-      作用：保存标签对象,功能与React.createRef()一样
+      作用：保存标签对象,功能与React.createRef()一样，useRef就像一个储物箱，你可以随意存放任何东西，再次渲染时它会去储物箱找，createRef每次渲染都会返回一个新的引用，而useRef每次都会返回相同的引用。
+
+    * Reducer Hook：整合逻辑
+
+      useReducer可以把它理解为一个轻量的redux。useReducer 返回一个状态对象和一个可以改变状态对象的dispatch函数。跟redux类似的，dispatch函数接受action作为参数，action包含type和payload属性。
+
+      ```jsx
+      const dataFetchReducer = (state, action) => {
+        switch (action.type) {
+          case 'FETCH_INIT':
+            return {
+              ...state,
+              isLoading: true,
+              isError: false
+            };
+          case 'FETCH_SUCCESS':
+            return {
+              ...state,
+              isLoading: false,
+              isError: false,
+              data: action.payload,
+            };
+          case 'FETCH_FAILURE':
+            return {
+              ...state,
+              isLoading: false,
+              isError: true,
+            };
+          default:
+            throw new Error();
+        }
+      };
+      
+      const useDataApi = (initialUrl, initialData) => {
+        const [url, setUrl] = useState(initialUrl);
+       
+        const [state, dispatch] = useReducer(dataFetchReducer, {
+          isLoading: false,
+          isError: false,
+          data: initialData,
+        });
+       
+        useEffect(() => {
+          // didCancel变量，如果这个变量为true，不会再发送dispatch，也不会再执行设置状态这个动作。这里我们在useEffe的返回函数中将didCancel置为true，在卸载组件时会自动调用这段逻辑。也就避免了再卸载的组件上设置状态。
+          let didCancel = false;
+       
+          const fetchData = async () => {
+            dispatch({ type: 'FETCH_INIT' });
+       
+            try {
+              const result = await axios(url);
+       
+              if (!didCancel) {
+                dispatch({ type: 'FETCH_SUCCESS', payload: result.data });
+              }
+            } catch (error) {
+              if (!didCancel) {
+                dispatch({ type: 'FETCH_FAILURE' });
+              }
+            }
+          };
+        fetchData();
+       
+          return () => {
+            didCancel = true;
+          };
+        }, [url]);
+       
+        const doFetch = url => {
+          setUrl(url);
+        };
+       
+        return { ...state, doFetch };
+      };
+      ```
 
   * 创建组件的第二种方式：类式组件
 
